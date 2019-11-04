@@ -133,12 +133,12 @@ Implement a MIPS emulator that executes MIPS instructions loaded on the memory.
   [17:s1] 0x00000001    1
   [18:s2] 0x00000002    2
   ...
-  >> 0x02324020		// add t0 t1 t2
+  >> 0x02324020		// add t0 s1 s2
   >> show t0
   [08:t0] 0x00000003    3
   ```
 
-- `load_program()` is to load a program into the memory. The program should be loaded from `INITIAL_PC`, and ends with the `halt` instruction. Assume a file "program" contains following instruction;
+- (Updated Nov 4) `load_program()` is to load a program into the memory. The function is invoked when you enter `load` command on the prompt with a file name to load. The program described in the specified file should be loaded from `INITIAL_PC`, and ends with the `halt` instruction. Assume a file "myprogram" contains following instruction;
 
   ```
   0x02324020  >> add t0 s1 s2
@@ -147,7 +147,7 @@ Implement a MIPS emulator that executes MIPS instructions loaded on the memory.
   0xae0a0008  >> sw t2 s0 8
   ```
 
-  Then the memory should looks like;
+  Then the memory should look like;
 
   ```
   >> dump 0x1000 32
@@ -159,7 +159,7 @@ Implement a MIPS emulator that executes MIPS instructions loaded on the memory.
   0x00001014:  00 00 00 00
   0x00001018:  00 00 00 00
   0x0000101c:  00 00 00 00
-  >> load program
+  >> load myprogram
   >> dump 0x1000 32
   0x00001000:  02 32 40 20    . 2 @
   0x00001004:  8e 09 00 00    . . . .
@@ -173,7 +173,7 @@ Implement a MIPS emulator that executes MIPS instructions loaded on the memory.
 
   Note that the halt instruction is inserted at  0x00001010 (0xffffffff) after the program.
 
-- `run_program()` is to execute the loaded program. Start executing the program from `INITIAL_PC` until it meets the halt instruction. You can actually use `process_instruction()` in this function.
+- (Updated Nov 4) `run_program()` is to execute the loaded program. This function is invoked when you enter `run` on the prompt, and it is supposed to start executing the program from `INITIAL_PC` until it meets the halt instruction. You can actually use `process_instruction()` in this function to perform the processing. Have a look at the comment in the template code for more explanation.
 
 
 
@@ -208,5 +208,6 @@ Implement a MIPS emulator that executes MIPS instructions loaded on the memory.
 	- No more than three pages
 
 - Git repository (HTTP URL) at http://git.ajou.ac.kr (10 pts). Use deploy token and deploy password.
+  - (Updated Nov 4) Make sure the deploy token is valid through November 13, 2pm.
 
 - WILL NOT ANSWER THE QUESTIONS ABOUT THOSE ALREADY SPECIFIED ON THE HANDOUT.
