@@ -20,10 +20,10 @@
 #include <inttypes.h>
 #include <ctype.h>
 
-/*====================================================================*/
-/*          ****** DO NOT MODIFY ANYTHING FROM THIS LINE ******       */
+ /*====================================================================*/
+ /*          ****** DO NOT MODIFY ANYTHING FROM THIS LINE ******       */
 
-/* To avoid security error on Visual Studio */
+ /* To avoid security error on Visual Studio */
 #define _CRT_SECURE_NO_WARNINGS
 #pragma warning(disable : 4996)
 
@@ -137,6 +137,152 @@ static inline bool strmatch(char * const str, const char *expect)
  */
 static int process_instruction(unsigned int instr)
 {
+	int binary[32] = { 0, }; // instr를 2진수로 변환한 자리값들을 저장할 배열
+
+	for (int i = 31; i >= 0; i--)
+	{
+		int mask = 1 << i;
+		binary[31 - i] = instr & mask ? 1 : 0;
+	}
+
+	int OPcode = 0, rs = 0, rt = 0, rd = 0, shamt = 0, func = 0, imm = 0, address = 0;
+
+	int position = 0;
+	int decimal = 0;
+
+	for (int i = 5; i >= 0; i--)
+	{
+		if (binary[i] == 1)
+			decimal += 1 << position;
+
+		position++;
+	} // OPcode 판별
+
+	if (decimal == 0) // R포맷일 때
+	{
+		int R_func = 0;
+		int R_position = 0;
+		for (int i = 31; i >= 26; i--)
+		{
+			if (binary[i] == 1)
+				R_func += 1 << R_position;
+
+			R_position++;
+		}
+		int rsposition = 0, rtposition = 0, rdposition = 0, s_position = 0;
+		for (int i = 10; i >= 6; i--)
+		{
+			if (binary[i] == 1)
+				rs += 1 << rsposition;
+
+			rsposition++;
+		} // rs 값
+		for (int i = 15; i >= 11; i--)
+		{
+			if (binary[i] == 1)
+				rt += 1 << rtposition;
+
+			rtposition++;
+		} // rt 값
+		for (int i = 20; i >= 16; i--)
+		{
+			if (binary[i] == 1)
+				rd += 1 << rdposition;
+
+			rdposition++;
+		} // rd 값
+		for (int i = 25; i >= 21; i--)
+		{
+			if (binary[i] == 1)
+				shamt += 1 << s_position;
+
+			s_position++;
+		} // shamt 값
+
+		if (R_func == 32)
+		{
+			registers[rd] = registers[rs] + registers[rt];
+		} // add
+		else if (R_func == 34)
+		{
+			registers[rd] = registers[rs] - registers[rt];
+		} // sub
+		else if (R_func == 36)
+		{
+			registers[rd] = registers[rs] & registers[rt];
+		} // and
+		else if (R_func == 37)
+		{
+			registers[rd] = registers[rs] | registers[rt];
+		} // or
+		else if (R_func == 39)
+		{
+			registers[rd] = ~(registers[rs] | registers[rt]);
+		} // nor
+		else if (R_func == 0)
+		{
+			registers[rd] = registers[rt] << shamt;
+		} // sll
+		else if (R_func == 2)
+		{
+			registers[rd] = registers[rt] >> shamt;
+		} // srl
+		else if (R_func == 3)
+		{
+
+		} // sra
+		else if (R_func == 42)
+		{
+			registers[rd] = (registers[rs] < registers[rt]) ? 1 : 0;
+		} // slt
+		else if (R_func == 8)
+		{
+			pc = registers[rs];
+		} // jr
+
+	} // R포맷일 때 종료
+	else if (decimal == 8)
+	{
+		registers[rt] = registers[rs]
+	} // andi
+	else if (decimal == 12)
+	{
+
+	} // andi
+	else if (decimal == 13)
+	{
+
+	} // ori
+	else if (decimal == 35)
+	{
+
+	} // lw
+	else if (decimal == 43)
+	{
+
+	} // sw
+	else if (decimal == 10)
+	{
+
+	} // slti
+	else if (decimal == 4)
+	{
+
+	} // beq
+	else if (decimal == 5)
+	{
+
+	} // bne
+	else if (decimal == 2)
+	{
+
+	} // j
+	else if (decimal == 3)
+	{
+
+	} // jal
+
+
 	return 0;
 }
 
@@ -214,9 +360,11 @@ static void __show_registers(char * const register_name)
 		from = 0;
 		to = 32;
 		include_pc = true;
-	} else if (strmatch(register_name, "pc")) {
+	}
+	else if (strmatch(register_name, "pc")) {
 		include_pc = true;
-	} else {
+	}
+	else {
 		for (int i = 0; i < sizeof(register_names) / sizeof(*register_names); i++) {
 			if (strmatch(register_name, register_names[i])) {
 				from = i;
@@ -235,16 +383,16 @@ static void __show_registers(char * const register_name)
 
 static void __dump_memory(unsigned int addr, size_t length)
 {
-    for (size_t i = 0; i < length; i += 4) {
-        fprintf(stderr, "0x%08lx:  %02x %02x %02x %02x    %c %c %c %c\n",
-				addr + i,
-                memory[addr + i    ], memory[addr + i + 1],
-                memory[addr + i + 2], memory[addr + i + 3],
-                isprint(memory[addr + i    ]) ? memory[addr + i    ] : '.',
-				isprint(memory[addr + i + 1]) ? memory[addr + i + 1] : '.',
-				isprint(memory[addr + i + 2]) ? memory[addr + i + 2] : '.',
-				isprint(memory[addr + i + 3]) ? memory[addr + i + 3] : '.');
-    }
+	for (size_t i = 0; i < length; i += 4) {
+		fprintf(stderr, "0x%08lx:  %02x %02x %02x %02x    %c %c %c %c\n",
+			addr + i,
+			memory[addr + i], memory[addr + i + 1],
+			memory[addr + i + 2], memory[addr + i + 3],
+			isprint(memory[addr + i]) ? memory[addr + i] : '.',
+			isprint(memory[addr + i + 1]) ? memory[addr + i + 1] : '.',
+			isprint(memory[addr + i + 2]) ? memory[addr + i + 2] : '.',
+			isprint(memory[addr + i + 3]) ? memory[addr + i + 3] : '.');
+	}
 }
 
 static void __process_command(int argc, char *argv[])
@@ -254,30 +402,39 @@ static void __process_command(int argc, char *argv[])
 	if (strmatch(argv[0], "load")) {
 		if (argc == 2) {
 			load_program(argv[1]);
-		} else {
+		}
+		else {
 			printf("Usage: load [program filename]\n");
 		}
-	} else if (strmatch(argv[0], "run")) {
+	}
+	else if (strmatch(argv[0], "run")) {
 		if (argc == 1) {
 			run_program();
-		} else {
+		}
+		else {
 			printf("Usage: run\n");
 		}
-	} else if (strmatch(argv[0], "show")) {
+	}
+	else if (strmatch(argv[0], "show")) {
 		if (argc == 1) {
 			__show_registers("all");
-		} else if (argc == 2) {
+		}
+		else if (argc == 2) {
 			__show_registers(argv[1]);
-		} else {
+		}
+		else {
 			printf("Usage: show { [register name] }\n");
 		}
-	} else if (strmatch(argv[0], "dump")) {
+	}
+	else if (strmatch(argv[0], "dump")) {
 		if (argc == 3) {
 			__dump_memory(strtoimax(argv[1], NULL, 0), strtoimax(argv[2], NULL, 0));
-		} else {
+		}
+		else {
 			printf("Usage: dump [start address] [length]\n");
 		}
-	} else {
+	}
+	else {
 		/**
 		 * You may hook up @translate() from pa1 here to allow assembly input!
 		 */
@@ -300,7 +457,8 @@ static int __parse_command(char *command, int *nr_tokens, char *tokens[])
 		if (isspace(*curr)) {
 			*curr = '\0';
 			token_started = false;
-		} else {
+		}
+		else {
 			if (!token_started) {
 				tokens[*nr_tokens] = curr;
 				*nr_tokens += 1;
@@ -323,7 +481,7 @@ static int __parse_command(char *command, int *nr_tokens, char *tokens[])
 
 int main(int argc, char * const argv[])
 {
-	char command[MAX_COMMAND] = {'\0'};
+	char command[MAX_COMMAND] = { '\0' };
 	FILE *input = stdin;
 
 	if (argc > 1) {
