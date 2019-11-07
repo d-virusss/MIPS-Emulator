@@ -467,6 +467,20 @@ static int process_instruction(unsigned int instr)
 
 static int load_program(char * const filename)
 {
+	char str[15];
+	unsigned int buffer;
+	FILE *fp = fopen("testcases/program-fibonacci", "rt");
+	while (feof(fp) == 0)
+	{
+		fscanf(fp, "%s", str);
+		buffer = strtol(str, NULL, 0);
+		memory[pc] == buffer << 24;
+		memory[pc + 1] == buffer << 16;
+		memory[pc + 2] == buffer << 8;
+		memory[pc + 3] == buffer;
+
+	}
+
 	return -EINVAL;
 }
 
