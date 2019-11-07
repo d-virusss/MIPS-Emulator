@@ -158,6 +158,30 @@ static int process_instruction(unsigned int instr)
 		position++;
 	} // OPcode 판별
 
+	/*int imm_position = 0;
+	for (int i = 31; i >= 16; i--)
+	{
+		if (binary[i] == 1)
+			imm += 1 << imm_position;
+
+		imm_position++;
+	} // imm 값*/
+	int rsposition = 0, rtposition = 0;
+	for (int i = 10; i >= 6; i--)
+	{
+		if (binary[i] == 1)
+			rs += 1 << rsposition;
+
+		rsposition++;
+	} // rs 값
+	for (int i = 15; i >= 11; i--)
+	{
+		if (binary[i] == 1)
+			rt += 1 << rtposition;
+
+		rtposition++;
+	} // rt 값
+
 	if (decimal == 0) // R포맷일 때
 	{
 		int R_func = 0;
@@ -170,20 +194,6 @@ static int process_instruction(unsigned int instr)
 			R_position++;
 		}
 		int rsposition = 0, rtposition = 0, rdposition = 0, s_position = 0;
-		for (int i = 10; i >= 6; i--)
-		{
-			if (binary[i] == 1)
-				rs += 1 << rsposition;
-
-			rsposition++;
-		} // rs 값
-		for (int i = 15; i >= 11; i--)
-		{
-			if (binary[i] == 1)
-				rt += 1 << rtposition;
-
-			rtposition++;
-		} // rt 값
 		for (int i = 20; i >= 16; i--)
 		{
 			if (binary[i] == 1)
@@ -229,7 +239,21 @@ static int process_instruction(unsigned int instr)
 		} // srl
 		else if (R_func == 3)
 		{
-
+			if (registers[rt] >= (1 << 31))
+			{
+				//printf("shamt : %d\n", shamt);
+				//registers[rd] = (signed int)registers[rt] >> shamt;
+				registers[rd] = registers[rt];
+				for (int i = 0; i < shamt; i++)
+				{
+					registers[rd] = (registers[rd] >> 1) | (1 << 31);
+					//printf("registerd[rd] = %08x\n", registers[rd]);
+				}
+			}
+			else
+			{
+				registers[rd] = registers[rt] >> shamt;
+			}
 		} // sra
 		else if (R_func == 42)
 		{
@@ -241,46 +265,169 @@ static int process_instruction(unsigned int instr)
 		} // jr
 
 	} // R포맷일 때 종료
+
 	else if (decimal == 8)
 	{
-		registers[rt] = registers[rs]
-	} // andi
+		int imm_position = 0;
+		for (int i = 31; i >= 16; i--)
+		{
+			if (binary[i] == 1)
+			{
+				if (i == 16 && binary[i] == 1)
+				{
+					imm += (1 << imm_position) * (-1);
+				}
+				else
+				{
+					imm += 1 << imm_position;
+				}
+			}
+			imm_position++;
+		}
+		registers[rt] = registers[rs] + imm; // signextImm
+	} // addi
 	else if (decimal == 12)
 	{
-
+		int imm_position = 0;
+		for (int i = 31; i >= 16; i--)
+		{
+			if (binary[i] == 1)
+			{
+				imm += 1 << imm_position;
+			}
+			imm_position++;
+		}
+		registers[rt] = registers[rs] & imm; // zeroextImm
 	} // andi
 	else if (decimal == 13)
 	{
-
+		int imm_position = 0;
+		for (int i = 31; i >= 16; i--)
+		{
+			if (binary[i] == 1)
+			{
+				imm += 1 << imm_position;
+			}
+			imm_position++;
+		}
+		registers[rt] = registers[rs] | imm;
 	} // ori
 	else if (decimal == 35)
 	{
-
+		int imm_position = 0;
+		for (int i = 31; i >= 16; i--)
+		{
+			if (binary[i] == 1)
+			{
+				imm += 1 << imm_position;
+			}
+			imm_position++;
+		}
+		registers[rt] = memory[registers[rs] + imm] << 24;
+		registers[rt] += memory[registers[rs] + imm + 1] << 16;
+		registers[rt] += memory[registers[rs] + imm + 2] << 8;
+		registers[rt] += memory[registers[rs] + imm + 3];
 	} // lw
 	else if (decimal == 43)
 	{
+		int imm_position = 0;
+		for (int i = 31; i >= 16; i--)
+		{
+			if (binary[i] == 1)
+			{
+				imm += 1 << imm_position;
+			}
+			imm_position++;
+		}
+		memory[registers[rs] + imm] = registers[rt] >> 24;
+		memory[registers[rs] + imm + 1] = registers[rt] >> 16;
+		memory[registers[rs] + imm + 2] = registers[rt] >> 8;
+		memory[registers[rs] + imm + 3] = registers[rt];
 
 	} // sw
 	else if (decimal == 10)
 	{
-
+		int imm_position = 0;
+		for (int i = 31; i >= 16; i--)
+		{
+			if (binary[i] == 1)
+			{
+				imm += 1 << imm_position;
+			}
+			imm_position++;
+		}
+		registers[rt] = (registers[rs] < imm ? 1 : 0);
 	} // slti
 	else if (decimal == 4)
 	{
-
+		int imm_position = 0;
+		for (int i = 31; i >= 16; i--)
+		{
+			if (binary[i] == 1)
+			{
+				if (i == 16 && binary[i] == 1)
+				{
+					imm += (1 << imm_position) * (-1);
+				}
+				else
+				{
+					imm += 1 << imm_position;
+				}
+			}
+			imm_position++;
+		}
+		//printf("pc is %d and imm is %d ha", pc, imm);
+		if (registers[rs] == registers[rt])
+		{
+			pc = pc + (imm * 4);
+		}
 	} // beq
 	else if (decimal == 5)
 	{
+		int imm_position = 0;
+		for (int i = 31; i >= 16; i--)
+		{
+			if (binary[i] == 1)
+			{
+				if (i == 16 && binary[i] == 1)
+				{
+					imm += (1 << imm_position) * (-1);
+				}
+				else
+				{
+					imm += 1 << imm_position;
+				}
+			}
+			imm_position++;
+		}
+		//printf("pc is %d imm is %d \n", pc, imm);
+		if (registers[rs] != registers[rt])
+		{
+			pc = pc + (imm * 4);
+		}
 
 	} // bne
-	else if (decimal == 2)
+	else if (decimal == 2 || decimal == 3)
 	{
+		int j_position = 0;
+		for (int i = 31; i >= 6; i--)
+		{
+			if (binary[i] == 1)
+				address += 1 << j_position;
 
-	} // j
-	else if (decimal == 3)
-	{
-
-	} // jal
+			j_position++;
+		}
+		address = (pc & 0xF0000000) | (address << 2);
+		if (decimal == 2)
+		{
+			pc = address;
+		} // j
+		else if (decimal == 3)
+		{
+			registers[31] = pc;
+			pc = address;
+		} // jal
+	} // j & jal
 
 
 	return 0;
