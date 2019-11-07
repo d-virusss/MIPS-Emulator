@@ -145,7 +145,8 @@ static int process_instruction(unsigned int instr)
 		binary[31 - i] = instr & mask ? 1 : 0;
 	}
 
-	int OPcode = 0, rs = 0, rt = 0, rd = 0, shamt = 0, func = 0, imm = 0, address = 0;
+	int OPcode = 0, rs = 0, rt = 0, rd = 0, shamt = 0, func = 0, imm = 0;
+	unsigned int address = 0;
 
 	int position = 0;
 	int decimal = 0;
@@ -181,256 +182,258 @@ static int process_instruction(unsigned int instr)
 
 		rtposition++;
 	} // rt 값
-
-	if (decimal == 0) // R포맷일 때
+	if (instr == 0xffffffff)
+		return 0;
+	else
 	{
-		int R_func = 0;
-		int R_position = 0;
-		for (int i = 31; i >= 26; i--)
+		if (decimal == 0) // R포맷일 때
 		{
-			if (binary[i] == 1)
-				R_func += 1 << R_position;
-
-			R_position++;
-		}
-		int rsposition = 0, rtposition = 0, rdposition = 0, s_position = 0;
-		for (int i = 20; i >= 16; i--)
-		{
-			if (binary[i] == 1)
-				rd += 1 << rdposition;
-
-			rdposition++;
-		} // rd 값
-		for (int i = 25; i >= 21; i--)
-		{
-			if (binary[i] == 1)
-				shamt += 1 << s_position;
-
-			s_position++;
-		} // shamt 값
-
-		if (R_func == 32)
-		{
-			registers[rd] = registers[rs] + registers[rt];
-		} // add
-		else if (R_func == 34)
-		{
-			registers[rd] = registers[rs] - registers[rt];
-		} // sub
-		else if (R_func == 36)
-		{
-			registers[rd] = registers[rs] & registers[rt];
-		} // and
-		else if (R_func == 37)
-		{
-			registers[rd] = registers[rs] | registers[rt];
-		} // or
-		else if (R_func == 39)
-		{
-			registers[rd] = ~(registers[rs] | registers[rt]);
-		} // nor
-		else if (R_func == 0)
-		{
-			registers[rd] = registers[rt] << shamt;
-		} // sll
-		else if (R_func == 2)
-		{
-			registers[rd] = registers[rt] >> shamt;
-		} // srl
-		else if (R_func == 3)
-		{
-			if (registers[rt] >= (1 << 31))
+			int R_func = 0;
+			int R_position = 0;
+			for (int i = 31; i >= 26; i--)
 			{
-				//printf("shamt : %d\n", shamt);
-				//registers[rd] = (signed int)registers[rt] >> shamt;
-				registers[rd] = registers[rt];
-				for (int i = 0; i < shamt; i++)
-				{
-					registers[rd] = (registers[rd] >> 1) | (1 << 31);
-					//printf("registerd[rd] = %08x\n", registers[rd]);
-				}
+				if (binary[i] == 1)
+					R_func += 1 << R_position;
+
+				R_position++;
 			}
-			else
+			int rsposition = 0, rtposition = 0, rdposition = 0, s_position = 0;
+			for (int i = 20; i >= 16; i--)
+			{
+				if (binary[i] == 1)
+					rd += 1 << rdposition;
+
+				rdposition++;
+			} // rd 값
+			for (int i = 25; i >= 21; i--)
+			{
+				if (binary[i] == 1)
+					shamt += 1 << s_position;
+
+				s_position++;
+			} // shamt 값
+
+			if (R_func == 32)
+			{
+				registers[rd] = registers[rs] + registers[rt];
+			} // add
+			else if (R_func == 34)
+			{
+				registers[rd] = registers[rs] - registers[rt];
+			} // sub
+			else if (R_func == 36)
+			{
+				registers[rd] = registers[rs] & registers[rt];
+			} // and
+			else if (R_func == 37)
+			{
+				registers[rd] = registers[rs] | registers[rt];
+			} // or
+			else if (R_func == 39)
+			{
+				registers[rd] = ~(registers[rs] | registers[rt]);
+			} // nor
+			else if (R_func == 0)
+			{
+				registers[rd] = registers[rt] << shamt;
+			} // sll
+			else if (R_func == 2)
 			{
 				registers[rd] = registers[rt] >> shamt;
-			}
-		} // sra
-		else if (R_func == 42)
-		{
-			registers[rd] = (registers[rs] < registers[rt]) ? 1 : 0;
-		} // slt
-		else if (R_func == 8)
-		{
-			pc = registers[rs];
-		} // jr
-
-	} // R포맷일 때 종료
-
-	else if (decimal == 8)
-	{
-		int imm_position = 0;
-		for (int i = 31; i >= 16; i--)
-		{
-			if (binary[i] == 1)
+			} // srl
+			else if (R_func == 3)
 			{
-				if (i == 16 && binary[i] == 1)
+				if (registers[rt] >= (1 << 31))
 				{
-					imm += (1 << imm_position) * (-1);
+					//printf("shamt : %d\n", shamt);
+					//registers[rd] = (signed int)registers[rt] >> shamt;
+					registers[rd] = registers[rt];
+					for (int i = 0; i < shamt; i++)
+					{
+						registers[rd] = (registers[rd] >> 1) | (1 << 31);
+						//printf("registerd[rd] = %08x\n", registers[rd]);
+					}
 				}
 				else
 				{
-					imm += 1 << imm_position;
+					registers[rd] = registers[rt] >> shamt;
 				}
-			}
-			imm_position++;
-		}
-		registers[rt] = registers[rs] + imm; // signextImm
-	} // addi
-	else if (decimal == 12)
-	{
-		int imm_position = 0;
-		for (int i = 31; i >= 16; i--)
-		{
-			if (binary[i] == 1)
+			} // sra
+			else if (R_func == 42)
 			{
-				imm += 1 << imm_position;
-			}
-			imm_position++;
-		}
-		registers[rt] = registers[rs] & imm; // zeroextImm
-	} // andi
-	else if (decimal == 13)
-	{
-		int imm_position = 0;
-		for (int i = 31; i >= 16; i--)
-		{
-			if (binary[i] == 1)
+				registers[rd] = (registers[rs] < registers[rt]) ? 1 : 0;
+			} // slt
+			else if (R_func == 8)
 			{
-				imm += 1 << imm_position;
-			}
-			imm_position++;
-		}
-		registers[rt] = registers[rs] | imm;
-	} // ori
-	else if (decimal == 35)
-	{
-		int imm_position = 0;
-		for (int i = 31; i >= 16; i--)
-		{
-			if (binary[i] == 1)
-			{
-				imm += 1 << imm_position;
-			}
-			imm_position++;
-		}
-		registers[rt] = memory[registers[rs] + imm] << 24;
-		registers[rt] += memory[registers[rs] + imm + 1] << 16;
-		registers[rt] += memory[registers[rs] + imm + 2] << 8;
-		registers[rt] += memory[registers[rs] + imm + 3];
-	} // lw
-	else if (decimal == 43)
-	{
-		int imm_position = 0;
-		for (int i = 31; i >= 16; i--)
-		{
-			if (binary[i] == 1)
-			{
-				imm += 1 << imm_position;
-			}
-			imm_position++;
-		}
-		memory[registers[rs] + imm] = registers[rt] >> 24;
-		memory[registers[rs] + imm + 1] = registers[rt] >> 16;
-		memory[registers[rs] + imm + 2] = registers[rt] >> 8;
-		memory[registers[rs] + imm + 3] = registers[rt];
+				pc = registers[rs];
+			} // jr
 
-	} // sw
-	else if (decimal == 10)
-	{
-		int imm_position = 0;
-		for (int i = 31; i >= 16; i--)
+		} // R포맷일 때 종료
+
+		else if (decimal == 8)
 		{
-			if (binary[i] == 1)
+			int imm_position = 0;
+			for (int i = 31; i >= 16; i--)
 			{
-				imm += 1 << imm_position;
-			}
-			imm_position++;
-		}
-		registers[rt] = (registers[rs] < imm ? 1 : 0);
-	} // slti
-	else if (decimal == 4)
-	{
-		int imm_position = 0;
-		for (int i = 31; i >= 16; i--)
-		{
-			if (binary[i] == 1)
-			{
-				if (i == 16 && binary[i] == 1)
+				if (binary[i] == 1)
 				{
-					imm += (1 << imm_position) * (-1);
+					if (i == 16 && binary[i] == 1)
+					{
+						imm += (1 << imm_position) * (-1);
+					}
+					else
+					{
+						imm += 1 << imm_position;
+					}
 				}
-				else
+				imm_position++;
+			}
+			registers[rt] = registers[rs] + imm; // signextImm
+		} // addi
+		else if (decimal == 12)
+		{
+			int imm_position = 0;
+			for (int i = 31; i >= 16; i--)
+			{
+				if (binary[i] == 1)
 				{
 					imm += 1 << imm_position;
 				}
+				imm_position++;
 			}
-			imm_position++;
-		}
-		//printf("pc is %d and imm is %d ha", pc, imm);
-		if (registers[rs] == registers[rt])
+			registers[rt] = registers[rs] & imm; // zeroextImm
+		} // andi
+		else if (decimal == 13)
 		{
-			pc = pc + (imm * 4);
-		}
-	} // beq
-	else if (decimal == 5)
-	{
-		int imm_position = 0;
-		for (int i = 31; i >= 16; i--)
-		{
-			if (binary[i] == 1)
+			int imm_position = 0;
+			for (int i = 31; i >= 16; i--)
 			{
-				if (i == 16 && binary[i] == 1)
-				{
-					imm += (1 << imm_position) * (-1);
-				}
-				else
+				if (binary[i] == 1)
 				{
 					imm += 1 << imm_position;
 				}
+				imm_position++;
 			}
-			imm_position++;
-		}
-		//printf("pc is %d imm is %d \n", pc, imm);
-		if (registers[rs] != registers[rt])
+			registers[rt] = registers[rs] | imm;
+		} // ori
+		else if (decimal == 35)
 		{
-			pc = pc + (imm * 4);
-		}
-
-	} // bne
-	else if (decimal == 2 || decimal == 3)
-	{
-		int j_position = 0;
-		for (int i = 31; i >= 6; i--)
+			int imm_position = 0;
+			for (int i = 31; i >= 16; i--)
+			{
+				if (binary[i] == 1)
+				{
+					imm += 1 << imm_position;
+				}
+				imm_position++;
+			}
+			registers[rt] = memory[registers[rs] + imm] << 24;
+			registers[rt] += memory[registers[rs] + imm + 1] << 16;
+			registers[rt] += memory[registers[rs] + imm + 2] << 8;
+			registers[rt] += memory[registers[rs] + imm + 3];
+		} // lw
+		else if (decimal == 43)
 		{
-			if (binary[i] == 1)
-				address += 1 << j_position;
+			int imm_position = 0;
+			for (int i = 31; i >= 16; i--)
+			{
+				if (binary[i] == 1)
+				{
+					imm += 1 << imm_position;
+				}
+				imm_position++;
+			}
+			memory[registers[rs] + imm] = registers[rt] >> 24;
+			memory[registers[rs] + imm + 1] = registers[rt] >> 16;
+			memory[registers[rs] + imm + 2] = registers[rt] >> 8;
+			memory[registers[rs] + imm + 3] = registers[rt];
 
-			j_position++;
-		}
-		address = (pc & 0xF0000000) | (address << 2);
-		if (decimal == 2)
+		} // sw
+		else if (decimal == 10)
 		{
-			pc = address;
-		} // j
-		else if (decimal == 3)
+			int imm_position = 0;
+			for (int i = 31; i >= 16; i--)
+			{
+				if (binary[i] == 1)
+				{
+					imm += 1 << imm_position;
+				}
+				imm_position++;
+			}
+			registers[rt] = (registers[rs] < imm ? 1 : 0);
+		} // slti
+		else if (decimal == 4)
 		{
-			registers[31] = pc;
-			pc = address;
-		} // jal
-	} // j & jal
+			int imm_position = 0;
+			for (int i = 31; i >= 16; i--)
+			{
+				if (binary[i] == 1)
+				{
+					if (i == 16 && binary[i] == 1)
+					{
+						imm += (1 << imm_position) * (-1);
+					}
+					else
+					{
+						imm += 1 << imm_position;
+					}
+				}
+				imm_position++;
+			}
+			//printf("pc is %d and imm is %d ha", pc, imm);
+			if (registers[rs] == registers[rt])
+			{
+				pc = pc + (imm * 4);
+			}
+		} // beq
+		else if (decimal == 5)
+		{
+			int imm_position = 0;
+			for (int i = 31; i >= 16; i--)
+			{
+				if (binary[i] == 1)
+				{
+					if (i == 16 && binary[i] == 1)
+					{
+						imm += (1 << imm_position) * (-1);
+					}
+					else
+					{
+						imm += 1 << imm_position;
+					}
+				}
+				imm_position++;
+			}
+			//printf("pc is %d imm is %d \n", pc, imm);
+			if (registers[rs] != registers[rt])
+			{
+				pc = pc + (imm * 4);
+			}
 
+		} // bne
+		else if (decimal == 2 || decimal == 3)
+		{
+			int j_position = 0;
+			for (int i = 31; i >= 6; i--)
+			{
+				if (binary[i] == 1)
+					address += 1 << j_position;
 
-	return 0;
+				j_position++;
+			}
+			address = (pc & 0xF0000000) | (address << 2);
+			if (decimal == 2)
+			{
+				pc = address;
+			} // j
+			else if (decimal == 3)
+			{
+				registers[31] = pc;
+				pc = address;
+			} // jal
+		} // j & jal
+		return 1;
+	}
 }
 
 
@@ -467,21 +470,41 @@ static int process_instruction(unsigned int instr)
 
 static int load_program(char * const filename)
 {
-	char str[15];
+	char str[200];
 	unsigned int buffer;
-	FILE *fp = fopen("testcases/program-fibonacci", "rt");
-	while (feof(fp) == 0)
+	FILE *fp = fopen(filename, "rt");
+	/*if (fp == NULL)
 	{
-		fscanf(fp, "%s", str);
-		buffer = strtol(str, NULL, 0);
-		memory[pc] == buffer << 24;
-		memory[pc + 1] == buffer << 16;
-		memory[pc + 2] == buffer << 8;
-		memory[pc + 3] == buffer;
+		printf("실패했어요 ㅠ\n");
+		return 1;
+	}*/
+	while (fgets(str, sizeof(str), fp))
+	{
+		buffer = strtoimax(str, NULL, 0);
+		//printf("0x%08x\n", buffer);
+		memory[pc] = buffer >> 24;
+		memory[pc + 1] = buffer >> 16;
+		memory[pc + 2] = buffer >> 8;
+		memory[pc + 3] = buffer;
 
+		/*if (memory[pc] == 0xff && memory[pc + 1] == 0xff && memory[pc + 2] == 0xff && memory[pc + 3] == 0xff)
+		{
+			fclose(fp); break;
+		}*/
+		/*printf("%02x ", memory[pc]);
+		printf("%02x ", memory[pc+1]);
+		printf("%02x ", memory[pc+2]);
+		printf("%02x \n", memory[pc+3]);*/
+
+		pc += 4;
+		//printf("현재의 pc 값 : 0x%08x", pc);
 	}
+	memory[pc] = 0xff;
+	memory[pc + 1] = 0xff;
+	memory[pc + 2] = 0xff;
+	memory[pc + 3] = 0xff;
 
-	return -EINVAL;
+	return 0;
 }
 
 
@@ -505,7 +528,33 @@ static int load_program(char * const filename)
 static int run_program(void)
 {
 	pc = INITIAL_PC;
-
+	unsigned int machine = 1;
+	while (process_instruction(machine))
+	{
+		/*for (int i = 0; i < 4; i++)
+		{
+			machine = (memory[pc] << 24) + (memory[pc + 1] << 16) + (memory[pc + 2] << 8) + (memory[pc + 3]);
+			if (machine == 0xffffffff)
+				return 0;
+			else
+			{
+				process_instruction(machine);
+				pc += 4;
+			}
+		}*/
+		machine = (memory[pc] << 24) + (memory[pc + 1] << 16) + (memory[pc + 2] << 8) + (memory[pc + 3]);
+		/*if (machine == 0xffffffff)
+		{
+			pc -= 4; return 0;
+		}
+		else
+		{
+			pc += 4;
+			process_instruction(machine);
+		}*/
+		process_instruction(machine);
+		pc += 4;
+	}
 	return 0;
 }
 
