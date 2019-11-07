@@ -529,8 +529,13 @@ static int run_program(void)
 {
 	pc = INITIAL_PC;
 	unsigned int machine = 1;
-	while (process_instruction(machine))
+	while (1)
 	{
+		machine = (memory[pc] << 24) + (memory[pc + 1] << 16) + (memory[pc + 2] << 8) + (memory[pc + 3]);
+		pc += 4;
+		if (process_instruction(machine) == 0)
+			return 0;
+		//process_instruction(machine);
 		/*for (int i = 0; i < 4; i++)
 		{
 			machine = (memory[pc] << 24) + (memory[pc + 1] << 16) + (memory[pc + 2] << 8) + (memory[pc + 3]);
@@ -542,7 +547,6 @@ static int run_program(void)
 				pc += 4;
 			}
 		}*/
-		machine = (memory[pc] << 24) + (memory[pc + 1] << 16) + (memory[pc + 2] << 8) + (memory[pc + 3]);
 		/*if (machine == 0xffffffff)
 		{
 			pc -= 4; return 0;
@@ -552,8 +556,6 @@ static int run_program(void)
 			pc += 4;
 			process_instruction(machine);
 		}*/
-		process_instruction(machine);
-		pc += 4;
 	}
 	return 0;
 }
